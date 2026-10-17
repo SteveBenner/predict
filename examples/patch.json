@@ -1,0 +1,10 @@
+{
+  "predict": "2.0",
+  "mode": "patch",
+  "ops": [
+    { "op": "set", "id": "submitted", "args": { "value": "20", "note": "of 24", "tone": "ok" } },
+    { "op": "set", "id": "late", "args": { "text": "One student has not submitted Assignment 2 yet.", "tone": "info" } },
+    { "op": "remove", "id": "next" },
+    { "op": "mount", "id": "done", "module": "callout", "into": "page", "args": { "text": "Reminder drafted for Student C.", "tone": "ok" } }
+  ]
+}

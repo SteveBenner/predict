@@ -1,0 +1,31 @@
+schema: polispec.environments/v1
+project: "predict"
+recorded: "2026-10-16"
+summary: "predict environments: main is dev, test is the persistent instance, stable is production."
+environments:
+  dev:
+    branch: main
+    checkout: repo
+    tier: dev
+    worktrees: [".predict-wt/*"]
+    audience: [operator]
+    exposure: loopback
+    data_classes: [synthetic, operational]
+  test:
+    branch: test
+    checkout: "~/.polispec/envs/predict/test"
+    tier: test
+    audience: [operator]
+    exposure: none
+    data_classes: [synthetic, operational]
+    operators: [agent, operator]
+  prod:
+    branch: stable
+    checkout: "~/.polispec/envs/predict/stable"
+    tier: prod
+    runs: tag
+    audience: [users]
+    exposure: none
+    data_classes: [operational]
+    operators: [operator]
+    rollback: "polispec deploy predict stable --tag vPREV"

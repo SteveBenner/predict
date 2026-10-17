@@ -1,0 +1,49 @@
+{
+  "predict": "2.0",
+  "mode": "replace",
+  "title": "Check-in for Sample Course 101",
+  "ops": [
+    { "op": "mount", "id": "page", "module": "stack", "args": { "gap": "loose" } },
+    { "op": "mount", "id": "intro", "module": "heading", "into": "page", "args": { "text": "Sample Course 101, week 3", "level": "1" } },
+    { "op": "mount", "id": "stats", "module": "stack", "into": "page", "args": { "direction": "horizontal" } },
+    { "op": "mount", "id": "enrolled", "module": "stat", "into": "stats", "args": { "label": "Enrolled", "value": "24" } },
+    { "op": "mount", "id": "submitted", "module": "stat", "into": "stats", "args": { "label": "Submitted", "value": "17", "note": "of 24", "tone": "warn" } },
+    { "op": "mount", "id": "late", "module": "callout", "into": "page", "args": { "title": "Late work", "text": "Three students have not submitted Assignment 2 yet.", "tone": "warn" } },
+    {
+      "op": "mount",
+      "id": "roster",
+      "module": "table",
+      "into": "page",
+      "args": {
+        "caption": "Assignment 2",
+        "columns": [
+          { "key": "student", "label": "Student" },
+          { "key": "status", "label": "Status" },
+          { "key": "score", "label": "Score", "align": "end" }
+        ],
+        "rows": [
+          { "student": "Student A", "status": "submitted", "score": 91 },
+          { "student": "Student B", "status": "submitted", "score": 84 },
+          { "student": "Student C", "status": "missing", "score": null }
+        ],
+        "row_action": { "name": "open_student" }
+      }
+    },
+    {
+      "op": "mount",
+      "id": "next",
+      "module": "choice",
+      "into": "page",
+      "args": {
+        "name": "next_step",
+        "label": "What should we do next?",
+        "options": [
+          { "value": "remind", "label": "Draft a reminder", "hint": "For the three missing submissions" },
+          { "value": "extend", "label": "Extend the due date" },
+          { "value": "skip", "label": "Nothing for now" }
+        ],
+        "action": { "name": "choose_next", "payload": { "week": 3 } }
+      }
+    }
+  ]
+}

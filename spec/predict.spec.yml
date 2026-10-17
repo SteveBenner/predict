@@ -1,0 +1,154 @@
+schema: predict.spec/v1
+edition: 2
+version: "2.2.1"
+recorded: "2026-10-05"
+status: draft
+
+purpose: >
+  Predict 2.0 is a JSON interface language. A producer, usually an agent, sends one document of opcodes that name
+  rui modules and carry typed args. A validator checks the document against a catalog of modules, and a browser
+  runtime mounts the modules. The producer never writes markup, style or script.
+
+document:
+  shape: '{ "predict": "2.0", "mode": "replace" | "patch", "title": string?, "ops": [op, ...] }'
+  mode: 'Defaults to "replace".'
+  title: At most 120 characters; the interface's accessible name.
+  ops:
+    mount:
+      shape: '{ "op": "mount", "id": ID, "module": NAME_OR_ID, "into": ID | "root"?, "slot": string?, "args": object? }'
+      into: 'Defaults to "root".'
+      slot: The first slot the target declares when absent. The target must declare at least one slot.
+      root_slot: A mount into root carries no slot; one that names a slot is refused as unknown_slot.
+      args: Checked against the module's props; unknown arg refused, a prop without a default is required, each value must match the prop's type. Defaults are merged in before the module renders.
+    set:
+      shape: '{ "op": "set", "id": ID, "args": object }'
+      semantics: Shallow-merges args into the module's current args; the merged args are checked as for mount.
+    remove:
+      shape: '{ "op": "remove", "id": ID }'
+      semantics: Removes the module and every module mounted inside it.
+    clear:
+      shape: '{ "op": "clear" }'
+      semantics: Removes everything.
+  order: Ops apply in order.
+  id: "Matches ^[a-z][a-z0-9_-]{0,39}$ and is unique among live modules. root is reserved."
+  replace_mode: The tree starts empty; set and remove may only name ids mounted earlier in the same document.
+  patch_mode: The tree starts as the current accepted interface; refused when there is none.
+  nesting: >
+    No module may have an ancestor with the same module id, except modules whose id starts with composite.layout.
+    Depth, with root at 0, is at most 8.
+  atomicity: A document is accepted only when every op is valid; one error refuses the whole document and the tree is unchanged.
+
+limits:
+  ops: 300
+  document_json_bytes: 200000
+  string_characters: 2000
+  text_characters: 8000
+  list_items: 500
+  map_key_characters: "1 to 60"
+  title_characters: 120
+  depth: 8
+
+types:
+  grammar:
+    simple: [string, text, integer, number, boolean, scalar, action]
+    enum: "enum(a|b|c): one of the listed bare words; the value is always a JSON string"
+    list: "list<T>: JSON array of T"
+    map: "map<T>: JSON object, keys are strings of 1 to 60 characters, values T"
+    record: "record{k:T,k?:T}: JSON object with exactly these keys; a key ending in ? is optional; unknown keys refused"
+  scalar: A string, number, boolean or null.
+  integer: A JSON number with no fraction.
+  action:
+    shape: '{ "name": NAME, "payload": map<scalar>? }'
+    name: Matches ^[a-z][a-z0-9_]{0,39}$.
+  defaults: A value equal to the prop's declared default is always accepted, which is how an action prop defaults to null.
+  dynamic_slot_family: >
+    A declared slot whose name has the form ARG[].FIELD, for example tabs[].key. The module has one slot per element
+    of args[ARG], named by that element's FIELD value.
+
+errors:
+  shape: '{ "index": op index or -1 for the document, "code": CODE, "path": string, "message": string }'
+  codes:
+    - bad_document
+    - bad_op
+    - bad_id
+    - duplicate_id
+    - unknown_module
+    - unknown_target
+    - not_a_container
+    - unknown_slot
+    - unknown_arg
+    - missing_arg
+    - bad_type
+    - nesting_refused
+    - limit_exceeded
+    - no_current_interface
+    - one_interface_per_output
+  path: A dotted path into the op, for example args.rows[3].due.
+  message: One plain sentence that names what was expected.
+  determinism: The same document, catalog and starting tree always give the same result, with errors in op order then path order.
+
+actions:
+  host_receives: '{ "name", "payload", "source": module id, "values": map<scalar> }'
+  values: What the module collected (form fields, the row, the chosen option).
+  payload: What the agent attached.
+
+tree:
+  schema: predict.tree/v1
+  shape: '{ "schema": "predict.tree/v1", "predict": "2.0", "title": string|null, "modules": [ { "id", "module": full rui id, "into", "slot", "args": merged args } ] }'
+  order: Mount order; a parent always precedes its children.
+  conversion: Converting a tree to a replace document is one mount op per entry.
+
+catalog:
+  schema: predict.catalog/v1
+  shape: '{ "schema", "predict": "2.0", "rui_version": string, "modules": [ { "id", "name", "summary", "kind", "version", "props": [ { "name", "type", "required", "default", "summary" } ], "slots": [ { "name", "summary" } ], "emits": bool } ] }'
+  source: The rui checkout's catalog.json (id, summary, kind, version, provides) and each module's shape.json (contract.props, contract.slots, contract.events).
+  inclusion: A module is included only when its provides list contains component.mount.
+  name: The last segment of the id; when two included modules share a last segment both use their full id as name.
+  required: True when the prop has no default key.
+  emits: True when contract.events has an entry whose direction is emits.
+  order: Sorted by id; no timestamps.
+  build_failure: The build fails, naming module and prop, when a prop type does not parse in the type grammar.
+  signature: "One line per module, generated only from the catalog, as NAME(prop: type, prop?: type, ...) [slots: a, b] - summary, where ? marks a prop that has a default."
+
+runtime:
+  module: src/predict-runtime.js
+  entry: "window.Predict.createHost({ target, catalog, resolve, onAction, onError })"
+  apply: "Validates against the live tree; on success applies the ops to the DOM and returns { ok: true }; on failure changes nothing and returns { ok: false, errors }."
+  not_loaded: A module the catalog knows but resolve cannot supply is an unknown_module error whose message says it is not loaded.
+  compose: A module composes another through ctx.compose(moduleId, args). The args are checked as for a mount, except that null is accepted for any prop of type action and tells the composed module not to emit.
+  render_failure: When a module throws while the ops are applied, the runtime rebuilds the previous tree and returns a bad_op error for the op that failed.
+  security:
+    - The runtime never evaluates strings.
+    - The runtime never sets innerHTML.
+    - The runtime never follows a URL from a document.
+    - Every string is treated as text.
+
+tool_server:
+  module: src/mcp.js
+  transport: stdio, JSON-RPC 2.0, one message per line
+  protocol_versions: ["2025-06-18", "2025-03-26", "2024-11-05"]
+  server_name: predict
+  tools:
+    render: Validates the document against the catalog and the tree in the state file, writes the new tree atomically on acceptance, and refuses every render after the first accepted one with one_interface_per_output.
+    describe: Answers one module's catalog entry as JSON.
+
+skill:
+  source: skills/predict/SKILL.md
+  vendored_as: vendor/predict/SKILL.md, listed in predict.lock like every other vendored file
+  purpose: The output grammar written for a model, injected into the system prompt of the agent that holds the render tool so the grammar is known before the first render.
+  covers: [document, ops, ids, placement and slots, nesting and limits, arg types, actions and the values each module sends, replace and patch, refusal codes with fixes, the viewport marker, composition, module sizes, two worked examples]
+  viewport_marker: >-
+    A host may open a request with "[predict viewport WIDTHxHEIGHT]", the size in CSS pixels of the area the interface
+    is drawn in, and may add the dashboard grid's fit inside the same brackets: ", grid N rows of P px, widget body h1 A,
+    h2 B, h3 C, h4 D px". N is the number of grid rows that fill the height, P the height of one row, and A to D the
+    inner height of a widget spanning 1 to 4 rows. The marker is host text, never something the user typed. With no
+    marker the skill assumes 1100x600, and with no grid facts a row of 144 pixels.
+  composition: >-
+    The skill tells the model to name the kind of answer in a fixed order (decision, one thing in depth, comparison,
+    trend, work list, draft, several questions, overview) and gives each kind one skeleton for the base modules and one
+    for the dashboard grid; to fill the first screen and never scroll the page; to put secondary material behind tabs
+    and details with their counts; to keep a different skeleton for a different kind of answer; and to add up module
+    heights from its size table against the viewport and each widget body before rendering.
+  sizes: The size table holds measured heights of the rui modules at a 15 pixel text size; a change to a module's layout in rui changes the table in the same Predict release.
+  module_list: Not repeated; the render tool's description carries the signatures generated from the catalog.
+  drift: Hand-written from this spec. A change to the grammar, a limit or an error code changes SKILL.md in the same release.

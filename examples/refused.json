@@ -1,0 +1,24 @@
+{
+  "predict": "2.0",
+  "mode": "replace",
+  "title": "A document with several mistakes",
+  "ops": [
+    { "op": "mount", "id": "Bad Id", "module": "heading", "args": { "text": "x" } },
+    { "op": "mount", "id": "page", "module": "stack" },
+    { "op": "mount", "id": "page", "module": "stack" },
+    { "op": "mount", "id": "chart1", "module": "sparkline", "into": "page" },
+    { "op": "mount", "id": "orphan", "module": "heading", "into": "nowhere", "args": { "text": "x" } },
+    { "op": "mount", "id": "leaf", "module": "heading", "into": "page", "args": { "text": "Fine" } },
+    { "op": "mount", "id": "inside", "module": "stat", "into": "leaf", "args": { "label": "x", "value": "1" } },
+    { "op": "mount", "id": "outer", "module": "card", "into": "page" },
+    { "op": "mount", "id": "inner", "module": "card", "into": "outer" },
+    { "op": "mount", "id": "tabset", "module": "tabs", "into": "page", "args": { "tabs": [{ "key": "one", "label": "One" }] } },
+    { "op": "mount", "id": "wrongpanel", "module": "heading", "into": "tabset", "slot": "two", "args": { "text": "x" } },
+    { "op": "mount", "id": "extra", "module": "heading", "args": { "text": "x", "colour": "red" } },
+    { "op": "mount", "id": "nolabel", "module": "stat", "args": { "value": "1" } },
+    { "op": "mount", "id": "wronglevel", "module": "heading", "args": { "text": "x", "level": "9" } },
+    { "op": "mount", "id": "wide", "module": "callout", "args": { "text": 12 } },
+    { "op": "set", "id": "ghost", "args": { "text": "x" } },
+    { "op": "frobnicate", "id": "page" }
+  ]
+}
