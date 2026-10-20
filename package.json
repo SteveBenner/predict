@@ -1,6 +1,6 @@
 {
   "name": "@predict/core",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "Predict 2.0: a JSON interface language that names rui modules, with a shared validator, a browser runtime and an MCP tool server.",
   "license": "MIT",
   "bin": {

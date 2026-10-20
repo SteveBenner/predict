@@ -1,6 +1,6 @@
 schema: predict.spec/v1
 edition: 2
-version: "2.2.1"
+version: "2.2.2"
 recorded: "2026-10-05"
 status: draft
 

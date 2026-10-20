@@ -9,7 +9,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  var VERSION = "2.2.1";
+  var VERSION = "2.2.2";
   var LIMITS = {
     ops: 300,
     bytes: 200000,
