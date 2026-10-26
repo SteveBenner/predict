@@ -31,5 +31,9 @@ environments:
     audience: [users]
     exposure: none
     data_classes: [operational]
+    deploy:
+      steps: ["true"]
+      health:
+        run: node bin/predict version
     operators: [operator]
     rollback: "polispec deploy predict stable --tag vPREV"
